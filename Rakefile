@@ -20,6 +20,14 @@ end
 
 require 'rake'
 
+require 'rake/extensiontask'
+Rake::ExtensionTask.new do |ext|
+  ext.name = 'mediainfo'
+  ext.ext_dir = 'ext/mediainfo'
+  ext.lib_dir = 'lib/mediainfo'
+  ext.tmp_dir = 'tmp'
+end
+
 require 'rubygems/tasks'
 Gem::Tasks.new checksum: true, pgp: true
 

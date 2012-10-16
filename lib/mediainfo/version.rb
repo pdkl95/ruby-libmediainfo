@@ -1,4 +1,4 @@
-module Libmediainfo
+module MediaInfo
   # Probably overkill, but why. This is all a thin wrapper around
   # the string in VERSION::STRING
   module VERSION
