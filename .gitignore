@@ -20,3 +20,4 @@ tags
 tmp
 vendor/bundle
 vendor/cache/*.gem
+test.avi

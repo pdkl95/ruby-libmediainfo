@@ -1,4 +1,4 @@
-module MediaInfo
+class MediaInfo
   # Probably overkill, but why. This is all a thin wrapper around
   # the string in VERSION::STRING
   module VERSION
@@ -68,6 +68,4 @@ module MediaInfo
   def version
     VERSION
   end
-
-  module_function :version
 end

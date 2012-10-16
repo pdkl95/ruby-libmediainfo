@@ -24,7 +24,7 @@ require 'rake/extensiontask'
 Rake::ExtensionTask.new do |ext|
   ext.name = 'mediainfo'
   ext.ext_dir = 'ext/mediainfo'
-  ext.lib_dir = 'lib/mediainfo'
+  ext.lib_dir = 'lib'
   ext.tmp_dir = 'tmp'
 end
 
