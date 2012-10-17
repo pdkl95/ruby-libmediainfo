@@ -19,13 +19,17 @@ rescue Bundler::BundlerError => e
 end
 
 require 'rake'
-
 require 'rake/extensiontask'
+
+spec = Gem::Specification.load('libmediainfo.gemspec')
+
 Rake::ExtensionTask.new do |ext|
   ext.name = 'mediainfo'
   ext.ext_dir = 'ext/mediainfo'
   ext.lib_dir = 'lib'
   ext.tmp_dir = 'tmp'
+  ext.source_pattern = '*.{c,h}'
+  ext.gem_spec = spec
 end
 
 require 'rubygems/tasks'

@@ -1,6 +1,6 @@
 #include "common.h"
 
-static VALUE mi_open(VALUE self, VALUE file_path)
+VALUE mi_open(VALUE self, VALUE file_path)
 {
     char *path = RSTRING_PTR(StringValue(file_path));
     UNPACK_MI;
@@ -10,20 +10,20 @@ static VALUE mi_open(VALUE self, VALUE file_path)
     return self;
 }
 
-static VALUE mi_close(VALUE self)
+VALUE mi_close(VALUE self)
 {
     UNPACK_MI;
     MediaInfo_Close(mi->handle);
     return self;
 }
 
-static VALUE mi_report_str(VALUE self)
+VALUE mi_report_str(VALUE self)
 {
     UNPACK_MI;
     return rb_str_new2(MediaInfo_Inform(mi->handle, 0));
 }
 
-static VALUE mi_get_i(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_id, VALUE request_type)
+VALUE mi_get_i(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_id, VALUE request_type)
 {
     UNPACK_MI;
     return rb_str_new2( MediaInfo_GetI(mi->handle,
@@ -33,7 +33,7 @@ static VALUE mi_get_i(VALUE self, VALUE stream_type, VALUE stream_id, VALUE fiel
                                        NUM2INT(request_type)) );
 }
 
-static VALUE mi_get(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_name, VALUE request_type)
+VALUE mi_get(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_name, VALUE request_type)
 {
     UNPACK_MI;
     return rb_str_new2( MediaInfo_Get(mi->handle,
@@ -44,7 +44,7 @@ static VALUE mi_get(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_
                                       0));
 }
 
-static VALUE mi_option(VALUE self, VALUE name, VALUE value)
+VALUE mi_option(VALUE self, VALUE name, VALUE value)
 {
     UNPACK_MI;
     return rb_str_new2( MediaInfo_Option(mi->handle,
@@ -52,7 +52,8 @@ static VALUE mi_option(VALUE self, VALUE name, VALUE value)
                                          RSTRING_PTR(value)) );
 }
 
-static VALUE mi_state_get(VALUE self) {
+VALUE mi_state_get(VALUE self)
+{
     UNPACK_MI;
     return INT2NUM(MediaInfo_State_Get(mi->handle));
 }
@@ -65,7 +66,7 @@ VALUE mi_count_get(VALUE self, VALUE stream_type, VALUE stream_id)
                                         NUM2INT(stream_id)) );
 }
 
-void init_mediainfo_api_method() {
+void init_mediainfo_api_methods(void) {
     rb_define_method(cMediaInfo, "open",        mi_open,       1);
     rb_define_method(cMediaInfo, "close",       mi_close,      0);
     rb_define_method(cMediaInfo, "report_str",  mi_report_str, 0);

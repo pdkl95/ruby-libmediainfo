@@ -24,7 +24,7 @@ static VALUE mi_initialize(VALUE self, VALUE path)
     return mi_open(self, path);
 }
 
-void Init_mediainfo()
+void Init_mediainfo(void)
 {
     MediaInfoDLL_Load();
     if (!MediaInfoDLL_IsLoaded()) {
@@ -36,6 +36,6 @@ void Init_mediainfo()
     rb_define_method(cMediaInfo, "initialize", mi_initialize, 1);
 
     init_mediainfo_constants();
-    init_mediainfo_api_methods();
-    init_mediainfo_helpers();
+//    init_mediainfo_api_methods();
+//    init_mediainfo_helpers();
 }
