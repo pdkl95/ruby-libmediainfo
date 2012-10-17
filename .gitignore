@@ -21,4 +21,6 @@ tmp
 vendor/bundle
 vendor/cache/*.gem
 test.avi
-**/*.so
+lib/**/*.so
+Makefile
+mkmf.log

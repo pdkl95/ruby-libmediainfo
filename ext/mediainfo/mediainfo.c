@@ -6,36 +6,61 @@ VALUE cMediaInfo_mInfo;
 VALUE cMediaInfo_mInfoOpt;
 VALUE cMediaInfo_mFileOpt;
 
-static void mi_dealloc(void *mi)
+wchar_t *mkWC(const char *c)
 {
-    free(mi);
+    const size_t sz = strlen(c) + 1;
+    wchar_t *wc = malloc(sz * sizeof(wchar_t));
+    mbstowcs(wc, c, sz);
+    return wc;
 }
 
-static VALUE mi_alloc(VALUE klass)
+void freeWC(wchar_t *wc)
 {
-    mi_t *mi = malloc(sizeof(mi_t));
-    mi->handle = MediaInfo_New();
-
-    return Data_Wrap_Struct(klass, NULL, mi_dealloc, mi);
+    free(wc);
 }
 
-static VALUE mi_initialize(VALUE self, VALUE path)
+
+static void mi_free(mi_t *mi)
 {
-    return mi_open(self, path);
+    xfree(mi);
+}
+
+static VALUE mi_new(int argc, VALUE *argv, VALUE class) {
+    VALUE self;
+    mi_t *p = ALLOC(mi_t);
+    p->handle = MediaInfo_New();
+    if (!p->handle) {
+        rb_raise(rb_eRuntimeError, "MediaInfo_New() failed!");
+    }
+
+    self = Data_Wrap_Struct(class, NULL, mi_free, p);
+    printf("handle = 0x%p\n", p->handle); fflush(stdout);
+    rb_obj_call_init(self, argc, argv);
+    return self;
+}
+
+static VALUE mi_initialize(int argc, VALUE *argv, VALUE self)
+{
+    if (argc > 0 ) {
+        return mi_open(argc, argv, self);
+    } else {
+        return self;
+    }
 }
 
 void Init_mediainfo(void)
 {
-    MediaInfoDLL_Load();
+    /*MediaInfoDLL_Load();
     if (!MediaInfoDLL_IsLoaded()) {
         rb_raise(rb_eLoadError, "Mediainfo.so not loaded!\n");
-    }
+    }*/
 
     cMediaInfo  = rb_define_class("MediaInfo", rb_cObject);
-    rb_define_alloc_func(cMediaInfo, mi_alloc);
-    rb_define_method(cMediaInfo, "initialize", mi_initialize, 1);
+
+    rb_define_singleton_method(cMediaInfo, "new", mi_new, -1);
+    rb_define_method(cMediaInfo, "initialize", mi_initialize, -1);
 
     init_mediainfo_constants();
-//    init_mediainfo_api_methods();
-//    init_mediainfo_helpers();
+    init_mediainfo_api_methods();
+    init_mediainfo_helpers();
 }

@@ -1,12 +1,29 @@
 #include "common.h"
 
-VALUE mi_open(VALUE self, VALUE file_path)
+VALUE mi_open(int argc, VALUE *argv, VALUE self)
 {
-    char *path = RSTRING_PTR(StringValue(file_path));
+    VALUE file_path;
+    const char *path;
+    const MediaInfo_Char *path_wc;
+    size_t retval;
     UNPACK_MI;
-    if (0 == MediaInfo_Open(mi->handle, path)) {
-        rb_raise(rb_eIOError, "MediaInfo_Open() failed");
+
+    if (argc < 1) {
+        rb_raise(rb_eArgError, "Missing: the filename to open");
+    } else {
+        file_path = argv[0];
+
+        path = RSTRING_PTR(StringValue(file_path));
+        path_wc = makeWC(path);
+        wprintf("OPEN: path = '%s'\n", path_wc); fflush(stdout);
+        retval = MediaInfo_Open(&mi->handle, path_wc);
+        freeWC(path_wc);
+
+        if (0 == retval) {
+            rb_raise(rb_eIOError, "MediaInfo_Open() failed");
+        }
     }
+    printf("OPEN: finished!\n"); fflush(stdout);
     return self;
 }
 
@@ -17,10 +34,18 @@ VALUE mi_close(VALUE self)
     return self;
 }
 
+char *mi_report_string(mi_t *mi)
+{
+    const MediaInfo_Char *str = MediaInfo_Inform(mi->handle, 0);
+    printf(">>>  str = 0x%p (length: %zd)\n", str, strlen(str));
+
+    return str;
+}
+
 VALUE mi_report_str(VALUE self)
 {
     UNPACK_MI;
-    return rb_str_new2(MediaInfo_Inform(mi->handle, 0));
+    return rb_str_new2(mi_report_string(mi));
 }
 
 VALUE mi_get_i(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_id, VALUE request_type)
@@ -67,7 +92,7 @@ VALUE mi_count_get(VALUE self, VALUE stream_type, VALUE stream_id)
 }
 
 void init_mediainfo_api_methods(void) {
-    rb_define_method(cMediaInfo, "open",        mi_open,       1);
+    rb_define_method(cMediaInfo, "open",        mi_open,       -1);
     rb_define_method(cMediaInfo, "close",       mi_close,      0);
     rb_define_method(cMediaInfo, "report_str",  mi_report_str, 0);
     rb_define_method(cMediaInfo, "get_by_id",   mi_get_i,      4);

@@ -1,0 +1,1 @@
+require 'mediainfo/mediainfo'

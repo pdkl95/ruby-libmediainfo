@@ -13,5 +13,7 @@ typedef struct media_info mi_t;
     mi_t *mi;                                   \
     Data_Get_Struct(self, mi_t, mi);
 
+wchar_t *allocWC(const char *c);
+void freeWC(wchar_t *wc);
 
 #endif /*LIBMI_MEDIAINFO_H*/

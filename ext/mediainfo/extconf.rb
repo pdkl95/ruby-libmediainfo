@@ -2,13 +2,10 @@
 
 require 'mkmf'
 
-have_header('dlfcn.h') or
-  fail "missing header: dlfcn.h"
+[ 'stdlib.h', 'string.h', 'wchar.h'
+].each do |hdr|
+  find_header(hdr) or fail "missing required header: #{hdr}"
+end
 
-have_library('dl', 'dlopen', 'dlfcn.h') or
-  fail "missing library: dl"
-
-find_header('MediaInfoDLL/MediaInfoDLL.h') or
-  fail "missing header: MediaInfoDLL.h"
-
+pkg_config 'libmediainfo'
 create_makefile 'mediainfo'
