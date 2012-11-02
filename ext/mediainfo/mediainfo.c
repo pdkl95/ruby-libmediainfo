@@ -6,20 +6,6 @@ VALUE cMediaInfo_mInfo;
 VALUE cMediaInfo_mInfoOpt;
 VALUE cMediaInfo_mFileOpt;
 
-wchar_t *mkWC(const char *c)
-{
-    const size_t sz = strlen(c) + 1;
-    wchar_t *wc = malloc(sz * sizeof(wchar_t));
-    mbstowcs(wc, c, sz);
-    return wc;
-}
-
-void freeWC(wchar_t *wc)
-{
-    free(wc);
-}
-
-
 static void mi_free(mi_t *mi)
 {
     xfree(mi);
@@ -28,14 +14,18 @@ static void mi_free(mi_t *mi)
 static VALUE mi_new(int argc, VALUE *argv, VALUE class) {
     VALUE self;
     mi_t *p = ALLOC(mi_t);
+    printf("mi_new(): calling MediaInfo_New()\n"); fflush(stdout);
     p->handle = MediaInfo_New();
+    printf("mi_new(): back from MediaInfo_New()\n"); fflush(stdout);
     if (!p->handle) {
         rb_raise(rb_eRuntimeError, "MediaInfo_New() failed!");
     }
-
+    printf("mi_new(): handle = 0x%p\n", p->handle); fflush(stdout);
     self = Data_Wrap_Struct(class, NULL, mi_free, p);
-    printf("handle = 0x%p\n", p->handle); fflush(stdout);
+    printf("mi_new(): allocated self with Data_Wrap_Struct()\n"); fflush(stdout);
+    printf("mi_new(): callinng rb_obj_call_init()\n"); fflush(stdout);
     rb_obj_call_init(self, argc, argv);
+    printf("mi_new(): returning self\n"); fflush(stdout);
     return self;
 }
 
@@ -50,10 +40,10 @@ static VALUE mi_initialize(int argc, VALUE *argv, VALUE self)
 
 void Init_mediainfo(void)
 {
-    /*MediaInfoDLL_Load();
+    MediaInfoDLL_Load();
     if (!MediaInfoDLL_IsLoaded()) {
         rb_raise(rb_eLoadError, "Mediainfo.so not loaded!\n");
-    }*/
+    }
 
     cMediaInfo  = rb_define_class("MediaInfo", rb_cObject);
 

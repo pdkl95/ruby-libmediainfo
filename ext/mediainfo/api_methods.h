@@ -3,7 +3,7 @@
 
 VALUE mi_open(int argc, VALUE *argv, VALUE self);
 VALUE mi_close(VALUE self);
-char *mi_report_string(mi_t *mi);
+const MediaInfo_Char *mi_report_string(mi_t *mi);
 VALUE mi_report_str(VALUE self);
 VALUE mi_get_i(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_id, VALUE request_type);
 

@@ -11,7 +11,7 @@
 #  error "Unusual size for the type \"MediaInfo_Char\" - giving up"
 #endif
 
-VALUE mediainfo_chars_to_rstring(MediaInfo_Char *str)
+VALUE mediainfo_chars_to_rstring(const MediaInfo_Char *str)
 {
     rb_encoding *enc = rb_enc_find(MEDIAINFO_CHAR_ENCODING);
     VALUE str_encoded = rb_external_str_new_with_enc((char *)str, wcslen(str), enc);
@@ -20,9 +20,26 @@ VALUE mediainfo_chars_to_rstring(MediaInfo_Char *str)
 
 MediaInfo_Char *rstring_to_mediainfo_chars(VALUE rstring)
 {
-    rb_encoding *enc = rb_enc_find(MEDIAINFO_CHAR_ENCODING);
-    VALUE rstring_encoded = rb_str_export_to_enc(rstring, enc);
-    return (MediaInfo_Char *)StringValueCStr(rstring_encoded);
+    rb_encoding *enc;
+    VALUE rstring_encoded;
+    MediaInfo_Char *str;
+
+    //printf("[rstring -> " MEDIAINFO_CHAR_ENCODING "] \n"); fflush(stdout);
+    enc = rb_enc_find(MEDIAINFO_CHAR_ENCODING);
+    if (!enc) {
+        rb_raise(rb_eRuntimeError, "no encoding return from: rb_enc_find(\"" MEDIAINFO_CHAR_ENCODING "\");\n");
+    }
+
+    printf("[rstring -> " MEDIAINFO_CHAR_ENCODING "] calling rb_str_export_to_enc()\n"); fflush(stdout);
+    rstring_encoded = rb_str_export_to_enc(rstring, enc);
+    if NIL_P(rstring_encoded) {
+        rb_raise(rb_eRuntimeError, "failure in rb_str_export_to_enc()\n");
+    }
+    printf("[rstring -> " MEDIAINFO_CHAR_ENCODING "] converting VALUE to c-string\n"); fflush(stdout);
+
+    str = (MediaInfo_Char *)RSTRING_PTR(rstring_encoded);
+    printf("[rstring -> " MEDIAINFO_CHAR_ENCODING "] returning new string\n"); fflush(stdout);
+    return str;
 }
 
 
@@ -30,28 +47,34 @@ VALUE mi_open(int argc, VALUE *argv, VALUE self)
 {
     VALUE file_path;
     MediaInfo_Char *path;
+    wchar_t *p;
     size_t retval;
     UNPACK_MI;
 
+    printf("mi_open(): unpacked mi->handle\n"); fflush(stdout);
+    printf("mi_open(): scanning args\n"); fflush(stdout);
     rb_scan_args(argc, argv, "10", &file_path);
-
+    printf("mi_open(): converting arg to (MediaInfo_Char *)\n"); fflush(stdout);
     path = rstring_to_mediainfo_chars(file_path);
 
 #if SIZEOF_MEDIAINFO_CHAR > 1
-    wprintf(L"OPEN: path = '%s'\n", (wchar_t *)path);
+    p = (wchar_t *)path;
+    printf("wcslen(path): %zd\n", wcslen(p));
+    wprintf(L"mi_open(): [wprintf, wchar_t] path = '%s'\n", p);
 #else
-    printf("OPEN: path = '%s'\n", path);
+    printf("mi_open(): [printf, char *] path = '%s'\n", path);
 #endif
     fflush(stdout);
+
     retval = MediaInfo_Open(&mi->handle, path);
-
+    printf("mi_open(): \n"); fflush(stdout);
     free(path);
-
+    printf("mi_open(): \n"); fflush(stdout);
     if (0 == retval) {
         rb_raise(rb_eIOError, "MediaInfo_Open() failed");
     }
 
-    printf("OPEN: finished!\n"); fflush(stdout);
+    printf("mi_open(): finished!\n"); fflush(stdout);
     return self;
 }
 
@@ -62,47 +85,71 @@ VALUE mi_close(VALUE self)
     return self;
 }
 
-char *mi_report_string(mi_t *mi)
+const MediaInfo_Char *mi_report_string(mi_t *mi)
 {
     const MediaInfo_Char *str = MediaInfo_Inform(mi->handle, 0);
+#if SIZEOF_MEDIAINFO_CHAR > 1
+    printf(">>>  str = 0x%p (length: %zd)\n", str, wcslen(str));
+#else
     printf(">>>  str = 0x%p (length: %zd)\n", str, strlen(str));
+#endif
 
     return str;
 }
 
 VALUE mi_report_str(VALUE self)
 {
+    VALUE rstr;
+    const MediaInfo_Char *str;
     UNPACK_MI;
-    return rb_str_new2(mi_report_string(mi));
+
+    str = mi_report_string(mi);
+    rstr = mediainfo_chars_to_rstring(str);
+    return rstr;
 }
 
 VALUE mi_get_i(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_id, VALUE request_type)
 {
+    const MediaInfo_Char *mi_str;
+    VALUE rstr;
     UNPACK_MI;
-    return rb_str_new2( MediaInfo_GetI(mi->handle,
-                                       NUM2INT(stream_type),
-                                       NUM2INT(stream_id),
-                                       NUM2INT(field_id),
-                                       NUM2INT(request_type)) );
+
+    mi_str = MediaInfo_GetI(mi->handle,
+        NUM2INT(stream_type),
+        NUM2INT(stream_id),
+        NUM2INT(field_id),
+        NUM2INT(request_type));
+    rstr = mediainfo_chars_to_rstring(mi_str);
+    return rstr;
 }
 
 VALUE mi_get(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_name, VALUE request_type)
 {
+    VALUE rstr;
+    const MediaInfo_Char *mi_str;
     UNPACK_MI;
-    return rb_str_new2( MediaInfo_Get(mi->handle,
-                                      NUM2INT(stream_type),
-                                      NUM2INT(stream_id),
-                                      RSTRING_PTR(field_name),
-                                      NUM2INT(request_type),
-                                      0));
+
+    mi_str = MediaInfo_Get(mi->handle,
+                           NUM2INT(stream_type),
+                           NUM2INT(stream_id),
+                           rstring_to_mediainfo_chars(field_name),
+                           NUM2INT(request_type),
+                           0);
+    rstr = mediainfo_chars_to_rstring(mi_str);
+    return rstr;
 }
 
 VALUE mi_option(VALUE self, VALUE name, VALUE value)
 {
+    VALUE rstr;
+    const MediaInfo_Char *mi_str;
     UNPACK_MI;
-    return rb_str_new2( MediaInfo_Option(mi->handle,
-                                         RSTRING_PTR(name),
-                                         RSTRING_PTR(value)) );
+
+    mi_str = MediaInfo_Option(mi->handle,
+                              rstring_to_mediainfo_chars(name),
+                              rstring_to_mediainfo_chars(value));
+    rstr = mediainfo_chars_to_rstring(mi_str);
+    return rstr;
 }
 
 VALUE mi_state_get(VALUE self)

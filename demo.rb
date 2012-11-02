@@ -16,11 +16,12 @@ end
 puts "*** end const dump: MediaInfo::Stream"
 puts
 
+puts "*** MediaInfo.new"
 x = MediaInfo.new
-puts "opening file: \"#{file}\""
+puts "*** opening file: \"#{file}\""
 x.open(file)
+puts "*** open successful!"
 
-
-puts "***********"
-puts x.print_report!
-puts "***********"
+#puts "***********"
+#puts x.print_report!
+#puts "***********"
