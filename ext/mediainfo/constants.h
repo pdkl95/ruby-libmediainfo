@@ -3,8 +3,8 @@
 
 extern VALUE cMediaInfo_mStream;
 extern VALUE cMediaInfo_mInfo;
-extern VALUE cMediaInfo_mInfoOpt;
-extern VALUE cMediaInfo_mFileOpt;
+extern VALUE cMediaInfo_mInfoOption;
+extern VALUE cMediaInfo_mFileOption;
 
 void init_mediainfo_constants();
 

@@ -1,15 +1,4 @@
 #include "common.h"
-#include <ruby/encoding.h>
-
-#if   SIZEOF_MEDIAINFO_CHAR == 1
-#  define MEDIAINFO_CHAR_ENCODING "UTF-8"
-#elif SIZEOF_MEDIAINFO_CHAR == 2
-#  define MEDIAINFO_CHAR_ENCODING "UTF-16LE"
-#elif SIZEOF_MEDIAINFO_CHAR == 4
-#  define MEDIAINFO_CHAR_ENCODING "UTF-32LE"
-#else
-#  error "Unusual size for the type \"MediaInfo_Char\" - giving up"
-#endif
 
 VALUE mediainfo_chars_to_rstring(const MediaInfo_Char *str)
 {
@@ -47,7 +36,6 @@ VALUE mi_open(int argc, VALUE *argv, VALUE self)
 {
     VALUE file_path;
     MediaInfo_Char *path;
-    wchar_t *p;
     size_t retval;
     UNPACK_MI;
 
@@ -57,13 +45,7 @@ VALUE mi_open(int argc, VALUE *argv, VALUE self)
     printf("mi_open(): converting arg to (MediaInfo_Char *)\n"); fflush(stdout);
     path = rstring_to_mediainfo_chars(file_path);
 
-#if SIZEOF_MEDIAINFO_CHAR > 1
-    p = (wchar_t *)path;
-    printf("wcslen(path): %zd\n", wcslen(p));
-    wprintf(L"mi_open(): [wprintf, wchar_t] path = '%s'\n", p);
-#else
-    printf("mi_open(): [printf, char *] path = '%s'\n", path);
-#endif
+    mic_printf("mi_open(): [printf, char *] path = '%s'\n", path);
     fflush(stdout);
 
     retval = MediaInfo_Open(&mi->handle, path);
@@ -88,12 +70,7 @@ VALUE mi_close(VALUE self)
 const MediaInfo_Char *mi_report_string(mi_t *mi)
 {
     const MediaInfo_Char *str = MediaInfo_Inform(mi->handle, 0);
-#if SIZEOF_MEDIAINFO_CHAR > 1
-    printf(">>>  str = 0x%p (length: %zd)\n", str, wcslen(str));
-#else
-    printf(">>>  str = 0x%p (length: %zd)\n", str, strlen(str));
-#endif
-
+    mic_printf(">>>  str = 0x%p (length: %zd)\n", str, mic_strlen(str));
     return str;
 }
 

@@ -1,39 +1,60 @@
 #include "common.h"
 
+VALUE cMediaInfo_mStream;
+VALUE cMediaInfo_mInfo;
+VALUE cMediaInfo_mInfoOption;
+VALUE cMediaInfo_mFileOption;
+
 void init_mediainfo_constants()
 {
-    cMediaInfo_mStream  = rb_define_module_under(cMediaInfo, "Stream");
-    cMediaInfo_mInfo    = rb_define_module_under(cMediaInfo, "Info");
-    cMediaInfo_mInfoOpt = rb_define_module_under(cMediaInfo, "InfoOption");
-    cMediaInfo_mFileOpt = rb_define_module_under(cMediaInfo, "FileOption");
+#define MOD(name)                                                       \
+    JOIN(cMediaInfo_m,name) = rb_define_module_under(cMediaInfo, Q(name))
 
-    rb_define_const(cMediaInfo_mStream,  "General",         INT2NUM(MediaInfo_Stream_General));
-    rb_define_const(cMediaInfo_mStream,  "Video",           INT2NUM(MediaInfo_Stream_Video));
-    rb_define_const(cMediaInfo_mStream,  "Audio",           INT2NUM(MediaInfo_Stream_Audio));
-    rb_define_const(cMediaInfo_mStream,  "Text",            INT2NUM(MediaInfo_Stream_Text));
-    rb_define_const(cMediaInfo_mStream,  "Chapters",        INT2NUM(MediaInfo_Stream_Chapters));
-    rb_define_const(cMediaInfo_mStream,  "Image",           INT2NUM(MediaInfo_Stream_Image));
-    rb_define_const(cMediaInfo_mStream,  "Menu",            INT2NUM(MediaInfo_Stream_Menu));
-    rb_define_const(cMediaInfo_mStream,  "Max",             INT2NUM(MediaInfo_Stream_Max));
+    MOD(Stream);
+    MOD(Info);
+    MOD(InfoOption);
+    MOD(FileOption);
 
-    rb_define_const(cMediaInfo_mInfo,    "Name",            INT2NUM(MediaInfo_Info_Name));
-    rb_define_const(cMediaInfo_mInfo,    "Text",            INT2NUM(MediaInfo_Info_Text));
-    rb_define_const(cMediaInfo_mInfo,    "Measure",         INT2NUM(MediaInfo_Info_Measure));
-    rb_define_const(cMediaInfo_mInfo,    "Options",         INT2NUM(MediaInfo_Info_Options));
-    rb_define_const(cMediaInfo_mInfo,    "Name_Text",       INT2NUM(MediaInfo_Info_Name_Text));
-    rb_define_const(cMediaInfo_mInfo,    "MeasureText",     INT2NUM(MediaInfo_Info_Measure_Text));
-    rb_define_const(cMediaInfo_mInfo,    "Info",            INT2NUM(MediaInfo_Info_Info));
-    rb_define_const(cMediaInfo_mInfo,    "HowTo",           INT2NUM(MediaInfo_Info_HowTo));
-    rb_define_const(cMediaInfo_mInfo,    "Max",             INT2NUM(MediaInfo_Info_Max));
+#undef MOD
 
-    rb_define_const(cMediaInfo_mInfoOpt, "ShowInInform",    INT2NUM(MediaInfo_InfoOption_ShowInInform));
-    rb_define_const(cMediaInfo_mInfoOpt, "Reserved",        INT2NUM(MediaInfo_InfoOption_Reserved));
-    rb_define_const(cMediaInfo_mInfoOpt, "ShowInSupported", INT2NUM(MediaInfo_InfoOption_ShowInSupported));
-    rb_define_const(cMediaInfo_mInfoOpt, "TypeOfValue",     INT2NUM(MediaInfo_InfoOption_TypeOfValue));
-    rb_define_const(cMediaInfo_mInfoOpt, "Max"        ,     INT2NUM(MediaInfo_InfoOption_Max));
+#define MI_CONST(cat, name)                     \
+    JOIN(JOIN(MediaInfo_,cat),JOIN(_,name))
 
-    rb_define_const(cMediaInfo_mFileOpt, "Nothing",         INT2NUM(MediaInfo_FileOption_Nothing));
-    rb_define_const(cMediaInfo_mFileOpt, "NoRecursive",     INT2NUM(MediaInfo_FileOption_NoRecursive));
-    rb_define_const(cMediaInfo_mFileOpt, "CloseAll",        INT2NUM(MediaInfo_FileOption_CloseAll));
-    rb_define_const(cMediaInfo_mFileOpt, "Max",             INT2NUM(MediaInfo_FileOption_Max));
+#define C(cat, name)                                                    \
+    rb_define_const( JOIN(cMediaInfo_m,cat),                            \
+                     Q(name),                                           \
+                     INT2NUM(MI_CONST(cat,name)))
+
+    C(Stream,General);
+    C(Stream,Video);
+    C(Stream,Audio);
+    C(Stream,Text);
+    C(Stream,Chapters);
+    C(Stream,Image);
+    C(Stream,Menu);
+    C(Stream,Max);
+
+    C(Info,Name);
+    C(Info,Text);
+    C(Info,Measure);
+    C(Info,Options);
+    C(Info,Name_Text);
+    C(Info,Measure_Text);
+    C(Info,Info);
+    C(Info,HowTo);
+    C(Info,Max);
+
+    C(InfoOption,ShowInInform);
+    C(InfoOption,Reserved);
+    C(InfoOption,ShowInSupported);
+    C(InfoOption,TypeOfValue);
+    C(InfoOption,Max);
+
+    C(FileOption,Nothing);
+    C(FileOption,NoRecursive);
+    C(FileOption,CloseAll);
+    C(FileOption,Max);
+
+#undef C
+#undef MI_CONST_NAME
 }

@@ -1,6 +1,6 @@
 #include "common.h"
 
-const char *stream_type_name(int type)
+static const char *stream_type_name(int type)
 {
     switch(type) {
     case MediaInfo_Stream_General:  return "General";
@@ -15,37 +15,39 @@ const char *stream_type_name(int type)
 }
 
 
-VALUE mi_stream_type_name(VALUE self, VALUE type)
+static VALUE mi_stream_type_name(int argc, VALUE *argv, VALUE self)
 {
-    return rb_str_new2( stream_type_name(NUM2INT(type)) );
+    VALUE type_number;
+    rb_scan_args(argc, argv, "10", &type_number);
+    return rb_str_new2( stream_type_name(NUM2INT(type_number)) );
 }
 
 
-VALUE mi_count_streams(VALUE self, VALUE type)
+static VALUE mi_count_streams(VALUE self, VALUE type)
 {
     return mi_count_get(self, type, INT2NUM(-1));
 }
 
-VALUE mi_count_stream_fields(VALUE self, VALUE type, VALUE stream_id)
+static VALUE mi_count_stream_fields(VALUE self, VALUE type, VALUE stream_id)
 {
     return mi_count_get(self, type, stream_id);
 }
 
-VALUE mi_print_report_bang(VALUE self)
+static VALUE mi_print_report(VALUE self)
 {
-    char *str;
-    MediaInfo_Char *str_wc;
     UNPACK_MI;
-    str = mi_report_string(mi);
-    str_wc = allocWC(str);
-    wprintf(L"str = 0x%p (length: %zd)\n", str_wc, wcslen(str_wc));
-    wprintf(L"%s", str_wc);
-    freeWC(str_wc);
+    mic_printf("%s", mi_report_string(mi));
+    return self;
 }
 
 void init_mediainfo_helpers(void) {
-    rb_define_method(cMediaInfo, "stream_type_name", mi_stream_type_name,    1);
-    rb_define_method(cMediaInfo, "count_streams",    mi_count_streams,       1);
-    rb_define_method(cMediaInfo, "count_fields",     mi_count_stream_fields, 2);
-    rb_define_method(cMediaInfo, "print_report!",    mi_print_report_bang,   0);
+#define M(name, numargs)                                            \
+    rb_define_method(cMediaInfo, Q(name), JOIN(mi_,name), numargs);
+
+    M(stream_type_name,     1);
+    M(count_streams,        1);
+    M(count_stream_fields,  2);
+    M(print_report,        -1);
+
+#undef M
 }

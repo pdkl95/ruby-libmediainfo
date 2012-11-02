@@ -1,10 +1,6 @@
 #include "common.h"
 
 VALUE cMediaInfo;
-VALUE cMediaInfo_mStream;
-VALUE cMediaInfo_mInfo;
-VALUE cMediaInfo_mInfoOpt;
-VALUE cMediaInfo_mFileOpt;
 
 static void mi_free(mi_t *mi)
 {
