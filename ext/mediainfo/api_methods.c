@@ -1,28 +1,56 @@
 #include "common.h"
+#include <ruby/encoding.h>
+
+#if   SIZEOF_MEDIAINFO_CHAR == 1
+#  define MEDIAINFO_CHAR_ENCODING "UTF-8"
+#elif SIZEOF_MEDIAINFO_CHAR == 2
+#  define MEDIAINFO_CHAR_ENCODING "UTF-16LE"
+#elif SIZEOF_MEDIAINFO_CHAR == 4
+#  define MEDIAINFO_CHAR_ENCODING "UTF-32LE"
+#else
+#  error "Unusual size for the type \"MediaInfo_Char\" - giving up"
+#endif
+
+VALUE mediainfo_chars_to_rstring(MediaInfo_Char *str)
+{
+    rb_encoding *enc = rb_enc_find(MEDIAINFO_CHAR_ENCODING);
+    VALUE str_encoded = rb_external_str_new_with_enc((char *)str, wcslen(str), enc);
+    return rb_str_conv_enc(str_encoded, enc, rb_utf8_encoding());
+}
+
+MediaInfo_Char *rstring_to_mediainfo_chars(VALUE rstring)
+{
+    rb_encoding *enc = rb_enc_find(MEDIAINFO_CHAR_ENCODING);
+    VALUE rstring_encoded = rb_str_export_to_enc(rstring, enc);
+    return (MediaInfo_Char *)StringValueCStr(rstring_encoded);
+}
+
 
 VALUE mi_open(int argc, VALUE *argv, VALUE self)
 {
     VALUE file_path;
-    const char *path;
-    const MediaInfo_Char *path_wc;
+    MediaInfo_Char *path;
     size_t retval;
     UNPACK_MI;
 
-    if (argc < 1) {
-        rb_raise(rb_eArgError, "Missing: the filename to open");
-    } else {
-        file_path = argv[0];
+    rb_scan_args(argc, argv, "10", &file_path);
 
-        path = RSTRING_PTR(StringValue(file_path));
-        path_wc = makeWC(path);
-        wprintf("OPEN: path = '%s'\n", path_wc); fflush(stdout);
-        retval = MediaInfo_Open(&mi->handle, path_wc);
-        freeWC(path_wc);
+    path = rstring_to_mediainfo_chars(file_path);
 
-        if (0 == retval) {
-            rb_raise(rb_eIOError, "MediaInfo_Open() failed");
-        }
+#if SIZEOF_MEDIAINFO_CHAR > 1
+    wprintf(L"OPEN: path = '%s'\n", (wchar_t *)path);
+#else
+    printf("OPEN: path = '%s'\n", path);
+#endif
+    fflush(stdout);
+    retval = MediaInfo_Open(&mi->handle, path);
+
+    free(path);
+
+    if (0 == retval) {
+        rb_raise(rb_eIOError, "MediaInfo_Open() failed");
     }
+
     printf("OPEN: finished!\n"); fflush(stdout);
     return self;
 }
