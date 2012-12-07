@@ -2,34 +2,52 @@
 
 VALUE mediainfo_chars_to_rstring(const MediaInfo_Char *str)
 {
-    rb_encoding *enc = rb_enc_find(MEDIAINFO_CHAR_ENCODING);
-    VALUE str_encoded = rb_external_str_new_with_enc((char *)str, wcslen(str), enc);
-    return rb_str_conv_enc(str_encoded, enc, rb_utf8_encoding());
+    VALUE rstring;
+    char *rstr;
+
+#ifdef MINFO_EXT_UNI
+    size_t len = wcstombs(NULL, str, 0);
+    rstr = malloc(len + 1);
+    if ((size_t)-1 == wcstombs(rstr, str, len)) {
+        rb_raise(rb_eEncodingError, "could not convert given wchar_t* string to char* as used by libmediainfo");
+    }
+#else
+    rstr = str;
+#endif
+
+    rstring = rb_str_new2(rstr);
+
+#ifdef MINFO_EXT_UNI
+    free(rstr);
+#endif
+
+    return rstring;
 }
 
 MediaInfo_Char *rstring_to_mediainfo_chars(VALUE rstring)
 {
-    rb_encoding *enc;
-    VALUE rstring_encoded;
-    MediaInfo_Char *str;
+    MediaInfo_Char *mi_str;
+    char *rstr = RSTRING_PTR(rstring);
 
-    //printf("[rstring -> " MEDIAINFO_CHAR_ENCODING "] \n"); fflush(stdout);
-    enc = rb_enc_find(MEDIAINFO_CHAR_ENCODING);
-    if (!enc) {
-        rb_raise(rb_eRuntimeError, "no encoding return from: rb_enc_find(\"" MEDIAINFO_CHAR_ENCODING "\");\n");
+#ifdef MINFO_EXT_UNI
+    size_t len = mbstowcs(NULL, rstr, 0);
+    mi_str = malloc(len + 1);
+    if ((size_t)-1 == mbstowcs(mi_str, rstr, len)) {
+        rb_raise(rb_eEncodingError, "could not convert given char* string to wchar_t* as needed by libmediainfo");
     }
+    mi_str[len] = '\0';
+#else
+    mi_str = rstr;
+#endif
 
-    printf("[rstring -> " MEDIAINFO_CHAR_ENCODING "] calling rb_str_export_to_enc()\n"); fflush(stdout);
-    rstring_encoded = rb_str_export_to_enc(rstring, enc);
-    if NIL_P(rstring_encoded) {
-        rb_raise(rb_eRuntimeError, "failure in rb_str_export_to_enc()\n");
-    }
-    printf("[rstring -> " MEDIAINFO_CHAR_ENCODING "] converting VALUE to c-string\n"); fflush(stdout);
-
-    str = (MediaInfo_Char *)RSTRING_PTR(rstring_encoded);
-    printf("[rstring -> " MEDIAINFO_CHAR_ENCODING "] returning new string\n"); fflush(stdout);
-    return str;
+    return mi_str;
 }
+
+#ifdef MINFO_EXT_UNI
+#  define RSTRING_TO_MINFO_FREE(x) free(x)
+#else
+#  define RSTRING_TO_MINFO_FREE(x)
+#endif
 
 
 VALUE mi_open(int argc, VALUE *argv, VALUE self)
@@ -45,13 +63,14 @@ VALUE mi_open(int argc, VALUE *argv, VALUE self)
     printf("mi_open(): converting arg to (MediaInfo_Char *)\n"); fflush(stdout);
     path = rstring_to_mediainfo_chars(file_path);
 
-    mic_printf("mi_open(): [printf, char *] path = '%s'\n", path);
+    printf("mi_open(): path = '" MINFO_EXT_FMT "'\n", path);
     fflush(stdout);
-
-    retval = MediaInfo_Open(&mi->handle, path);
-    printf("mi_open(): \n"); fflush(stdout);
-    free(path);
-    printf("mi_open(): \n"); fflush(stdout);
+    void *m = MediaInfo_New();
+    retval = MediaInfo_Open(m, L"test.avi");
+    //retval = MediaInfo_Open(mi->handle, path);
+    printf("mi_open(): MediaInfo_Open() returned %zd; calling free()\n", retval); fflush(stdout);
+    RSTRING_TO_MINFO_FREE(path);
+    printf("mi_open(): free()ed the converted-string buffer\n"); fflush(stdout);
     if (0 == retval) {
         rb_raise(rb_eIOError, "MediaInfo_Open() failed");
     }
@@ -70,7 +89,6 @@ VALUE mi_close(VALUE self)
 const MediaInfo_Char *mi_report_string(mi_t *mi)
 {
     const MediaInfo_Char *str = MediaInfo_Inform(mi->handle, 0);
-    mic_printf(">>>  str = 0x%p (length: %zd)\n", str, mic_strlen(str));
     return str;
 }
 
@@ -92,10 +110,11 @@ VALUE mi_get_i(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_id, V
     UNPACK_MI;
 
     mi_str = MediaInfo_GetI(mi->handle,
-        NUM2INT(stream_type),
-        NUM2INT(stream_id),
-        NUM2INT(field_id),
-        NUM2INT(request_type));
+                            NUM2INT(stream_type),
+                            NUM2INT(stream_id),
+                            NUM2INT(field_id),
+                            NUM2INT(request_type));
+
     rstr = mediainfo_chars_to_rstring(mi_str);
     return rstr;
 }
@@ -103,15 +122,21 @@ VALUE mi_get_i(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_id, V
 VALUE mi_get(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_name, VALUE request_type)
 {
     VALUE rstr;
+    MediaInfo_Char *mi_field_name;
     const MediaInfo_Char *mi_str;
     UNPACK_MI;
+
+    mi_field_name = rstring_to_mediainfo_chars(field_name);
 
     mi_str = MediaInfo_Get(mi->handle,
                            NUM2INT(stream_type),
                            NUM2INT(stream_id),
-                           rstring_to_mediainfo_chars(field_name),
+                           mi_field_name,
                            NUM2INT(request_type),
                            0);
+
+    RSTRING_TO_MINFO_FREE(mi_field_name);
+
     rstr = mediainfo_chars_to_rstring(mi_str);
     return rstr;
 }
@@ -119,12 +144,19 @@ VALUE mi_get(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_name, V
 VALUE mi_option(VALUE self, VALUE name, VALUE value)
 {
     VALUE rstr;
+    MediaInfo_Char *mi_name;
+    MediaInfo_Char *mi_value;
     const MediaInfo_Char *mi_str;
     UNPACK_MI;
 
-    mi_str = MediaInfo_Option(mi->handle,
-                              rstring_to_mediainfo_chars(name),
-                              rstring_to_mediainfo_chars(value));
+    mi_name  = rstring_to_mediainfo_chars(name);
+    mi_value = rstring_to_mediainfo_chars(value);
+
+    mi_str = MediaInfo_Option(mi->handle, mi_name, mi_value);
+
+    RSTRING_TO_MINFO_FREE(mi_value);
+    RSTRING_TO_MINFO_FREE(mi_name);
+
     rstr = mediainfo_chars_to_rstring(mi_str);
     return rstr;
 }
