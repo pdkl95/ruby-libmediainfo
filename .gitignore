@@ -24,3 +24,4 @@ test.avi
 lib/**/*.so
 Makefile
 mkmf.log
+lib/mediainfo.so

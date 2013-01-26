@@ -21,8 +21,8 @@ Gem::Specification.new do |gem|
   gem.extensions << "ext/mediainfo/extconf.rb"
 
   gem.add_development_dependency 'bundler', '~> 1.2'
-  gem.add_development_dependency 'rake', '~> 0.9'
-  gem.add_development_dependency 'redcarpet', '~> 2.1'
+  gem.add_development_dependency 'rake', '~> 10.0'
+  gem.add_development_dependency 'redcarpet', '~> 2.2'
   gem.add_development_dependency 'rspec', '~> 2.11'
   gem.add_development_dependency 'rubygems-tasks', '~> 0.2'
   gem.add_development_dependency 'yard', '~> 0.8'
