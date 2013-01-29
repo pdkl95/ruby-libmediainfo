@@ -1,1 +1,1 @@
-require 'mediainfo/mediainfo'
+require 'libmediainfo'
