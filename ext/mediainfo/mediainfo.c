@@ -8,6 +8,32 @@ VALUE cMediaInfo_mInfo;
 VALUE cMediaInfo_mInfoOption;
 VALUE cMediaInfo_mFileOption;
 
+
+/***************************************************************************
+ * libmediainfo helpers
+ */
+
+static const char *
+stream_type_name(int type)
+{
+    switch(type) {
+    case MediaInfo_Stream_General:  return "general";
+    case MediaInfo_Stream_Video:    return "video";
+    case MediaInfo_Stream_Audio:    return "audio";
+    case MediaInfo_Stream_Text:     return "text";
+    case MediaInfo_Stream_Chapters: return "chapters";
+    case MediaInfo_Stream_Image:    return "image";
+    case MediaInfo_Stream_Menu:     return "menu";
+    default:                        return "unknown";
+    }
+}
+
+
+
+/***************************************************************************
+ * UNICODE helpers
+ */
+
 static VALUE
 mediainfo_chars_to_rstring(const MediaInfo_Char *str)
 {
@@ -48,6 +74,35 @@ rstring_to_mediainfo_chars(VALUE rstring)
 
     return mi_str;
 }
+
+
+static VALUE
+mediainfo_string_to_rb(const MediaInfo_Char *str)
+{
+    bool isnum = true;
+    const MediaInfo_Char *p;
+    for (p = str; *p; p++) {
+        if (!MINFO_EXT_ISDIGIT(*p)) {
+            isnum = false;
+            break;
+        }
+    }
+
+    if (isnum) {
+        return LL2NUM(MINFO_EXT_STRTOLL(str, NULL, 10));
+    } else {
+#ifdef MINFO_EXT_UNI
+        return mediainfo_chars_to_rstring(str);
+#else
+        return rb_str_new2(str);
+#endif
+    }
+}
+
+
+/***************************************************************************
+ * class MediaInfo
+ */
 
 static mi_t *
 mi_t_alloc()
@@ -185,29 +240,6 @@ mi_inform(VALUE self)
 }
 
 static VALUE
-str_to_rb(const MediaInfo_Char *str)
-{
-    bool isnum = true;
-    const MediaInfo_Char *p;
-    for (p = str; *p; p++) {
-        if (!MINFO_EXT_ISDIGIT(*p)) {
-            isnum = false;
-            break;
-        }
-    }
-
-    if (isnum) {
-        return LL2NUM(MINFO_EXT_STRTOLL(str, NULL, 10));
-    } else {
-#ifdef MINFO_EXT_UNI
-        return mediainfo_chars_to_rstring(str);
-#else
-        return rb_str_new2(str);
-#endif
-    }
-}
-
-static VALUE
 mi_get_i(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_id, VALUE request_type)
 {
     const MediaInfo_Char *mi_str;
@@ -219,7 +251,7 @@ mi_get_i(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_id, VALUE r
                              NUM2INT(field_id),
                              NUM2INT(request_type));
 
-    return str_to_rb(mi_str);
+    return mediainfo_string_to_rb(mi_str);
 }
 
 static VALUE
@@ -240,7 +272,7 @@ mi_get(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_name, VALUE r
 
     RSTRING_TO_MINFO_FREE(mi_field_name);
 
-    return str_to_rb(mi_str);
+    return mediainfo_string_to_rb(mi_str);
 }
 
 static VALUE
@@ -290,22 +322,6 @@ mi_check_binding(void *func, char *name)
     }
 }
 
-static const char *
-stream_type_name(int type)
-{
-    switch(type) {
-    case MediaInfo_Stream_General:  return "general";
-    case MediaInfo_Stream_Video:    return "video";
-    case MediaInfo_Stream_Audio:    return "audio";
-    case MediaInfo_Stream_Text:     return "text";
-    case MediaInfo_Stream_Chapters: return "chapters";
-    case MediaInfo_Stream_Image:    return "image";
-    case MediaInfo_Stream_Menu:     return "menu";
-    default:                        return "unknown";
-    }
-}
-
-
 static VALUE
 mi_stream_type(int argc, VALUE *argv, VALUE self)
 {
@@ -350,8 +366,13 @@ FIELD_GET(image,Image);
 FIELD_GET(menu,Menu);
 #undef FIELD_GET
 
-void
-Init_mediainfo(void)
+
+/***************************************************************************
+ * initialization
+ */
+
+static void
+Init_mediainfo_api(void)
 {
     MediaInfoDLL_Load();
     if (!MediaInfoDLL_IsLoaded()) {
@@ -373,46 +394,11 @@ Init_mediainfo(void)
     MI_API(state_get,State_Get);
     MI_API(count_get,Count_Get);
 #undef MI_API
+}
 
-    /*
-     * Classes
-     */
-    cMediaInfo  = rb_define_class("MediaInfo", rb_cObject);
-    rb_define_alloc_func(cMediaInfo, mi_allocate);
-
-    rb_define_method(cMediaInfo, "<=>",   mi_compare,  1);
-    rb_define_method(cMediaInfo, "path",  mi_path_get, 0);
-    rb_define_method(cMediaInfo, "path=", mi_path_set, 1);
-
-#define M(name, numargs)                                            \
-    rb_define_method(cMediaInfo, Q(name), JOIN(mi_,name), numargs);
-    M(initialize,  -1);
-    M(inspect,      0);
-    M(to_s,         0);
-    M(open,        -1);
-    M(close,        0);
-    M(inform,       0);
-    M(get_i,        4);
-    M(get,          4);
-    M(option,       2);
-    M(state_get,    0);
-    M(count_get,    2);
-    M(stream_type, -1);
-    M(num_streams,  1);
-    M(num_fields,   2);
-    M(get_field,    3);
-    M(f_general,    2);
-    M(f_video,      2);
-    M(f_audio,      2);
-    M(f_text,       2);
-    M(f_chapters,   2);
-    M(f_image,      2);
-    M(f_menu,       2);
-#undef M
-
-    /*
-     * Constants
-     */
+static void
+Init_mediainfo_constants(void)
+{
 #define MOD(name)                                                       \
     JOIN(cMediaInfo_m,name) = rb_define_module_under(cMediaInfo, Q(name))
 
@@ -461,4 +447,49 @@ Init_mediainfo(void)
     C(FileOption,Max);
 #undef C
 #undef MI_CONST_NAME
+}
+
+static void
+Init_mediainfo_class_MediaInfo(void)
+{
+    cMediaInfo = rb_define_class("MediaInfo", rb_cObject);
+    rb_define_alloc_func(cMediaInfo, mi_allocate);
+
+    rb_define_method(cMediaInfo, "<=>",   mi_compare,  1);
+    rb_define_method(cMediaInfo, "path",  mi_path_get, 0);
+    rb_define_method(cMediaInfo, "path=", mi_path_set, 1);
+
+#define M(name, numargs)                                            \
+    rb_define_method(cMediaInfo, Q(name), JOIN(mi_,name), numargs);
+    M(initialize,  -1);
+    M(inspect,      0);
+    M(to_s,         0);
+    M(open,        -1);
+    M(close,        0);
+    M(inform,       0);
+    M(get_i,        4);
+    M(get,          4);
+    M(option,       2);
+    M(state_get,    0);
+    M(count_get,    2);
+    M(stream_type, -1);
+    M(num_streams,  1);
+    M(num_fields,   2);
+    M(get_field,    3);
+    M(f_general,    2);
+    M(f_video,      2);
+    M(f_audio,      2);
+    M(f_text,       2);
+    M(f_chapters,   2);
+    M(f_image,      2);
+    M(f_menu,       2);
+#undef M
+}
+
+void
+Init_mediainfo(void)
+{
+    Init_mediainfo_api();
+    Init_mediainfo_class_MediaInfo();
+    Init_mediainfo_constants();
 }
