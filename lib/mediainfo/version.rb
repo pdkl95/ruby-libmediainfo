@@ -6,7 +6,7 @@ class MediaInfo
 
     # The major version number of the gem. Anything that depends on
     # on this gem is likely to break when this changes.
-    MAJOR     = 0
+    MAJOR     = 1
 
     # The minor version number. Changes here could break external
     # dependencies on rare occasions, but effort will be taken to
@@ -15,7 +15,7 @@ class MediaInfo
 
     # The patch-level version number. Changes here should never
     # break anything, and usually represent bugfixes.
-    PATCH     = 1
+    PATCH     = 0
 
     # The whole version number, in array form.
     SIGNATURE = [MAJOR, MINOR, PATCH]
