@@ -13,7 +13,7 @@ mi_hdr = 'MediaInfoDLL/MediaInfoDLL.h'
 have_header(mi_hdr) or fail "missing libmediainfo header \"#{mi_hdr}\""
 
 #create_header
-create_makefile 'mediainfo'
+create_makefile 'libmediainfo'
 
 if ENV['V'] == '1'
   system("sed -i -e 's/^V = 0/V = 1/' Makefile")

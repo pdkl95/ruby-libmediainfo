@@ -21,7 +21,6 @@ tmp
 vendor/bundle
 vendor/cache/*.gem
 test.avi
-lib/**/*.so
 Makefile
 mkmf.log
-lib/mediainfo.so
+lib/libmediainfo.so

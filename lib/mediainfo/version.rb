@@ -15,7 +15,7 @@ class MediaInfo
 
     # The patch-level version number. Changes here should never
     # break anything, and usually represent bugfixes.
-    PATCH     = 0
+    PATCH     = 1
 
     # The whole version number, in array form.
     SIGNATURE = [MAJOR, MINOR, PATCH]

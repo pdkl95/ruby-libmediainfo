@@ -18,7 +18,7 @@ Gem::Specification.new do |gem|
   gem.test_files = gem.files.grep(%r{^(test|spec|features)/})
   gem.require_paths = ['lib']
 
-  gem.extensions << "ext/mediainfo/extconf.rb"
+  gem.extensions << "ext/libmediainfo/extconf.rb"
 
   gem.add_development_dependency 'bundler', '~> 1.2'
   gem.add_development_dependency 'rake', '~> 10.0'
