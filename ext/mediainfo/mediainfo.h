@@ -4,6 +4,7 @@
 #include <ruby.h>
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <wchar.h>
 #include <MediaInfoDLL/MediaInfoDLL.h>
@@ -16,11 +17,15 @@
 #  define MINFO_EXT_UNI 1
 #  define MINFO_EXT_FMT "%S"
 #  define MINFO_EXT_LEN wcslen
+#  define MINFO_EXT_ISDIGIT iswdigit
+#  define MINFO_EXT_STRTOLL wcstoll
 #  define RSTRING_TO_MINFO_FREE(x) xfree(x)
 #else
 #  undef MINFO_EXT_UNI
 #  define MINFO_EXT_FMT "%s"
 #  define MINFO_EXT_LEN strlen
+#  define MINFO_EXT_ISDIGIT isdigit
+#  define MINFO_EXT_STRTOLL strtoll
 #  define RSTRING_TO_MINFO_FREE(x)
 #endif
 
@@ -44,12 +49,15 @@ extern struct media_info_api cMediaInfoAPI;
 
 struct media_info {
     void *handle;
+    VALUE path;
 };
 typedef struct media_info mi_t;
 
-#define UNPACK_MI                               \
+#define GET_MI(mi, selfptr)                     \
     mi_t *mi;                                   \
-    Data_Get_Struct(self, mi_t, mi);
+    Data_Get_Struct(selfptr, mi_t, mi);
+
+#define UNPACK_MI GET_MI(mi, self)
 
 
 #endif /*LIBMI_MEDIAINFO_H*/

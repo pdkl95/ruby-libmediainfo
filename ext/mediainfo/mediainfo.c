@@ -16,7 +16,7 @@ mediainfo_chars_to_rstring(const MediaInfo_Char *str)
 
 #ifdef MINFO_EXT_UNI
     size_t len = wcstombs(NULL, str, 0);
-    rstr = malloc(len + 1);
+    rstr = alloca(len + 1);
     if ((size_t)-1 == wcstombs(rstr, str, len)) {
         rb_raise(rb_eEncodingError, "could not convert given wchar_t* string to char* as used by libmediainfo");
     }
@@ -25,10 +25,6 @@ mediainfo_chars_to_rstring(const MediaInfo_Char *str)
 #endif
 
     rstring = rb_str_new2(rstr);
-
-#ifdef MINFO_EXT_UNI
-    free(rstr);
-#endif
 
     return rstring;
 }
@@ -41,11 +37,11 @@ rstring_to_mediainfo_chars(VALUE rstring)
 
 #ifdef MINFO_EXT_UNI
     size_t len = mbstowcs(NULL, rstr, 0);
-    mi_str = xmalloc(len + 1);
+    mi_str = xmalloc(sizeof(MediaInfo_Char) * (len + 1));
     if ((size_t)-1 == mbstowcs(mi_str, rstr, len)) {
         rb_raise(rb_eEncodingError, "could not convert given char* string to wchar_t* as needed by libmediainfo");
     }
-    mi_str[len] = '\0';
+    mi_str[len] = L'\0';
 #else
     mi_str = rstr;
 #endif
@@ -59,6 +55,7 @@ mi_t_alloc()
     mi_t *mi;
     mi = ALLOC(mi_t);
     mi->handle = cMediaInfoAPI.new();
+    mi->path = Qnil;
     return mi;
 }
 
@@ -69,33 +66,84 @@ mi_t_free(mi_t *mi)
     xfree(mi);
 }
 
+static void
+mi_t_mark(mi_t *mi)
+{
+    if (mi->path != Qnil) {
+        rb_gc_mark(mi->path);
+    }
+}
+
 static VALUE
 mi_allocate(VALUE klass) {
     mi_t *mi = mi_t_alloc();
     if (!mi->handle) {
         rb_raise(rb_eRuntimeError, "MediaInfo_New() failed!");
     }
-    return Data_Wrap_Struct(klass, NULL, mi_t_free, mi);
+    return Data_Wrap_Struct(klass, mi_t_mark, mi_t_free, mi);
+}
+
+static VALUE
+mi_compare(VALUE self, VALUE other)
+{
+    GET_MI(a, self);
+    GET_MI(b, other);
+    return rb_funcall(a->path, rb_intern("<=>"), 1, b->path);
+}
+
+static VALUE
+mi_path_get(VALUE self)
+{
+    UNPACK_MI;
+    return mi->path;
+}
+
+static VALUE
+mi_path_set(VALUE self, VALUE val)
+{
+    UNPACK_MI;
+    mi->path = val;
+    return val;
+}
+
+static VALUE
+mi_inspect(VALUE self)
+{
+    char *buf;
+    UNPACK_MI;
+
+    if (mi->path == Qnil) {
+        return rb_str_new2("#<MediaInfo nil>");
+    } else {
+#define INSPECT_FMT "#<MediaInfo \"%s\">"
+        buf = alloca(RSTRING_LEN(mi->path) + sizeof(INSPECT_FMT));
+        sprintf(buf, INSPECT_FMT, RSTRING_PTR(mi->path));
+        return rb_str_new2(buf);
+    }
+}
+
+static VALUE
+mi_to_s(VALUE self)
+{
+    UNPACK_MI;
+    return mi_inspect(self);
 }
 
 static VALUE
 mi_open(int argc, VALUE *argv, VALUE self)
 {
-    VALUE file_path;
-#define MAXLEN 4096
-    MediaInfo_Char path[MAXLEN];
+    MediaInfo_Char *path;
     size_t retval;
     UNPACK_MI;
 
-    rb_scan_args(argc, argv, "10", &file_path);
-    //path = rstring_to_mediainfo_chars(file_path);
-    mbstowcs(path, RSTRING_PTR(file_path), MAXLEN);
-#undef MAXLEN
-    printf("mi_open: path = '" MINFO_EXT_FMT "'\n", path);fflush(stdout);
+    rb_scan_args(argc, argv, "10", &mi->path);
+    mi->path = StringValue(mi->path);
+    path = rstring_to_mediainfo_chars(mi->path);
+
     if (!cMediaInfoAPI.open(mi->handle, path)) {
         rb_raise(rb_eIOError, "MediaInfo_Open() failed");
     }
-    //RSTRING_TO_MINFO_FREE(path);
+    RSTRING_TO_MINFO_FREE(path);
     return self;
 }
 
@@ -137,10 +185,32 @@ mi_inform(VALUE self)
 }
 
 static VALUE
+str_to_rb(const MediaInfo_Char *str)
+{
+    bool isnum = true;
+    const MediaInfo_Char *p;
+    for (p = str; *p; p++) {
+        if (!MINFO_EXT_ISDIGIT(*p)) {
+            isnum = false;
+            break;
+        }
+    }
+
+    if (isnum) {
+        return LL2NUM(MINFO_EXT_STRTOLL(str, NULL, 10));
+    } else {
+#ifdef MINFO_EXT_UNI
+        return mediainfo_chars_to_rstring(str);
+#else
+        return rb_str_new2(str);
+#endif
+    }
+}
+
+static VALUE
 mi_get_i(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_id, VALUE request_type)
 {
     const MediaInfo_Char *mi_str;
-    VALUE rstr;
     UNPACK_MI;
 
     mi_str = cMediaInfoAPI.geti(mi->handle,
@@ -149,14 +219,12 @@ mi_get_i(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_id, VALUE r
                              NUM2INT(field_id),
                              NUM2INT(request_type));
 
-    rstr = mediainfo_chars_to_rstring(mi_str);
-    return rstr;
+    return str_to_rb(mi_str);
 }
 
 static VALUE
 mi_get(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_name, VALUE request_type)
 {
-    VALUE rstr;
     MediaInfo_Char *mi_field_name;
     const MediaInfo_Char *mi_str;
     UNPACK_MI;
@@ -172,8 +240,7 @@ mi_get(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_name, VALUE r
 
     RSTRING_TO_MINFO_FREE(mi_field_name);
 
-    rstr = mediainfo_chars_to_rstring(mi_str);
-    return rstr;
+    return str_to_rb(mi_str);
 }
 
 static VALUE
@@ -260,6 +327,29 @@ mi_num_fields(VALUE self, VALUE type, VALUE stream_id)
     return mi_count_get(self, type, stream_id);
 }
 
+static VALUE
+mi_get_field(VALUE self, VALUE stream_type, VALUE stream_id, VALUE field_name)
+{
+    return mi_get(self, stream_type, stream_id, field_name,
+                  INT2NUM(MediaInfo_Info_Text));
+}
+
+#define FIELD_GET(t,T)                                                  \
+    static VALUE                                                        \
+    JOIN(mi_f_,t)(VALUE self, VALUE stream_id, VALUE field_name)        \
+    {                                                                   \
+        return mi_get_field(self, INT2NUM(JOIN(MediaInfo_Stream_,T)),   \
+                            stream_id, field_name);                     \
+    }
+FIELD_GET(general,General);
+FIELD_GET(video,Video);
+FIELD_GET(audio,Audio);
+FIELD_GET(text,Text);
+FIELD_GET(chapters,Chapters);
+FIELD_GET(image,Image);
+FIELD_GET(menu,Menu);
+#undef FIELD_GET
+
 void
 Init_mediainfo(void)
 {
@@ -268,9 +358,6 @@ Init_mediainfo(void)
         rb_raise(rb_eLoadError, "Mediainfo.so not loaded!\n");
     }
 
-    /*
-     * Classes
-     */
 #define MI_API(field, name)                                             \
     cMediaInfoAPI.field = JOIN(MediaInfo_,name);                        \
     mi_check_binding(cMediaInfoAPI.field, Q(name));
@@ -287,12 +374,21 @@ Init_mediainfo(void)
     MI_API(count_get,Count_Get);
 #undef MI_API
 
+    /*
+     * Classes
+     */
     cMediaInfo  = rb_define_class("MediaInfo", rb_cObject);
     rb_define_alloc_func(cMediaInfo, mi_allocate);
+
+    rb_define_method(cMediaInfo, "<=>",   mi_compare,  1);
+    rb_define_method(cMediaInfo, "path",  mi_path_get, 0);
+    rb_define_method(cMediaInfo, "path=", mi_path_set, 1);
 
 #define M(name, numargs)                                            \
     rb_define_method(cMediaInfo, Q(name), JOIN(mi_,name), numargs);
     M(initialize,  -1);
+    M(inspect,      0);
+    M(to_s,         0);
     M(open,        -1);
     M(close,        0);
     M(inform,       0);
@@ -304,6 +400,14 @@ Init_mediainfo(void)
     M(stream_type, -1);
     M(num_streams,  1);
     M(num_fields,   2);
+    M(get_field,    3);
+    M(f_general,    2);
+    M(f_video,      2);
+    M(f_audio,      2);
+    M(f_text,       2);
+    M(f_chapters,   2);
+    M(f_image,      2);
+    M(f_menu,       2);
 #undef M
 
     /*
