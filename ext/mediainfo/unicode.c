@@ -17,6 +17,7 @@ mediainfo_chars_to_rstring(const MediaInfo_Char *str)
     if ((size_t)-1 == wcstombs(rstr, str, len)) {
         rb_raise(rb_eEncodingError, "could not convert given wchar_t* string to char* as used by libmediainfo");
     }
+    rstr[len] = L'\0';
 #else
     rstr = str;
 #endif
@@ -60,7 +61,11 @@ mediainfo_string_to_rb(const MediaInfo_Char *str)
     }
 
     if (isnum) {
-        return LL2NUM(MINFO_EXT_STRTOLL(str, NULL, 10));
+        if (p == str) {
+            return Qnil;
+        } else {
+            return LL2NUM(MINFO_EXT_STRTOLL(str, NULL, 10));
+        }
     } else {
 #ifdef MINFO_EXT_UNI
         return mediainfo_chars_to_rstring(str);

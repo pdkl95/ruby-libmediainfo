@@ -4,16 +4,16 @@
 #if defined(UNICODE) || defined (_UNICODE)
 #  define MINFO_EXT_UNI 1
 #  define MINFO_EXT_FMT "%S"
-#  define MINFO_EXT_LEN wcslen
-#  define MINFO_EXT_ISDIGIT iswdigit
+#  define MINFO_EXT_STRLEN  wcslen
 #  define MINFO_EXT_STRTOLL wcstoll
+#  define MINFO_EXT_ISDIGIT iswdigit
 #  define RSTRING_TO_MINFO_FREE(x) xfree(x)
 #else
 #  undef MINFO_EXT_UNI
 #  define MINFO_EXT_FMT "%s"
-#  define MINFO_EXT_LEN strlen
-#  define MINFO_EXT_ISDIGIT isdigit
+#  define MINFO_EXT_STRLEN  strlen
 #  define MINFO_EXT_STRTOLL strtoll
+#  define MINFO_EXT_ISDIGIT isdigit
 #  define RSTRING_TO_MINFO_FREE(x)
 #endif
 

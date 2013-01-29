@@ -7,21 +7,6 @@ VALUE cMediaInfo_mInfo;
 VALUE cMediaInfo_mInfoOption;
 VALUE cMediaInfo_mFileOption;
 
-const char *
-mediainfo_stream_type_name(int stream_type)
-{
-    switch(stream_type) {
-    case MediaInfo_Stream_General:  return "general";
-    case MediaInfo_Stream_Video:    return "video";
-    case MediaInfo_Stream_Audio:    return "audio";
-    case MediaInfo_Stream_Text:     return "text";
-    case MediaInfo_Stream_Chapters: return "chapters";
-    case MediaInfo_Stream_Image:    return "image";
-    case MediaInfo_Stream_Menu:     return "menu";
-    default:                        return "unknown";
-    }
-}
-
 void
 Init_mediainfo_constants(void)
 {
