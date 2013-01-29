@@ -66,6 +66,7 @@ JOIN(mediainfo_stream_type_get_,name)(VALUE self)   \
 }
 GETTER(mediainfo);
 GETTER(tracks);
+GETTER(name);
 #undef GETTER
 
 static VALUE
@@ -130,6 +131,13 @@ mediainfo_stream_type_track(VALUE self, VALUE idx)
     return rb_ary_entry(st->tracks, NUM2INT(idx));
 }
 
+static VALUE
+mediainfo_stream_type_each(VALUE self)
+{
+    UNPACK_STREAM_TYPE;
+    return rb_ary_each(st->tracks);
+}
+
 void
 Init_mediainfo_MediaInfo_StreamType(void)
 {
@@ -146,6 +154,7 @@ Init_mediainfo_MediaInfo_StreamType(void)
                      0);
     GET(mediainfo);
     GET(tracks);
+    GET(name);
 #undef GET
 
 #define M(suffix, name, numargs)                          \
@@ -157,5 +166,6 @@ Init_mediainfo_MediaInfo_StreamType(void)
     M(to_s,       "to_s",       0);
     M(track,      "track",      1);
     M(track,      "[]",         1);
+    M(each,       "each",       0);
 #undef M
 }

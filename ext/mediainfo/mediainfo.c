@@ -322,6 +322,12 @@ FIELD_GET(image,Image);
 FIELD_GET(menu,Menu);
 #undef FIELD_GET
 
+static VALUE
+mediainfo_each(VALUE self)
+{
+    UNPACK_MI;
+    return rb_ary_each(mi->tracks);
+}
 
 void
 Init_mediainfo_MediaInfo(void)
@@ -329,7 +335,8 @@ Init_mediainfo_MediaInfo(void)
     cMediaInfo = rb_define_class("MediaInfo", rb_cObject);
     rb_define_alloc_func(cMediaInfo, mediainfo_allocate);
 
-    rb_define_method(cMediaInfo, "<=>",   mediainfo_compare,  1);
+    rb_define_method(cMediaInfo, "<=>",        mediainfo_compare, 1);
+    rb_define_method(cMediaInfo, "each_track", mediainfo_each,    0);
 
 #define GET(name)                               \
     rb_define_method(cMediaInfo,                \
@@ -372,5 +379,6 @@ Init_mediainfo_MediaInfo(void)
     M(f_chapters,   2);
     M(f_image,      2);
     M(f_menu,       2);
+    M(each,         0);
 #undef M
 }

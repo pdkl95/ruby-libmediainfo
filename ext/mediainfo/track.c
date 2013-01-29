@@ -66,6 +66,7 @@ JOIN(mediainfo_track_get_,name)(VALUE self)     \
 GETTER(mediainfo);
 GETTER(stream_type);
 GETTER(fields);
+GETTER(id);
 #undef GETTER
 
 static VALUE
@@ -141,6 +142,28 @@ mediainfo_track_inspect(VALUE self)
     }
 }
 
+int do_each_pair(VALUE key, VALUE val, VALUE data)
+{
+    rb_yield_values(2, key, val);
+    return ST_CONTINUE;
+}
+
+static VALUE
+mediainfo_track_keys(VALUE self)
+{
+    UNPACK_TRACK;
+    return rb_funcall(track->fields, rb_intern("keys"), 0);
+}
+
+static VALUE
+mediainfo_track_each(VALUE self)
+{
+    UNPACK_TRACK;
+    rb_need_block();
+    rb_hash_foreach(track->fields, do_each_pair, Qnil);
+    return self;
+}
+
 static VALUE
 mediainfo_track_to_s(VALUE self)
 {
@@ -160,6 +183,7 @@ void Init_mediainfo_MediaInfo_Track(void)
     GET(mediainfo);
     GET(stream_type);
     GET(fields);
+    GET(id);
 #undef GET
 
 #define M(suffix, name, numargs)                    \
@@ -174,5 +198,8 @@ void Init_mediainfo_MediaInfo_Track(void)
     M(get_fields,    "fields",      0);
     M(initialize,    "initialize",  3);
     M(to_s,          "to_s",        0);
+    M(keys,          "keys",        0);
+    M(each,          "each",        0);
+    M(each,          "each_field",  0);
 #undef M
 }
