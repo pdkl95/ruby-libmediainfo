@@ -6,12 +6,12 @@ require 'mediainfo/version'
 Gem::Specification.new do |gem|
   gem.name = "libmediainfo"
   gem.version = MediaInfo::VERSION::STRING
-  gem.summary = %q{TODO: Summary}
-  gem.description = %q{TODO: Description}
+  gem.summary = "Ruby bindings for libmediainfo.so"
+  gem.description = "Ruby bindings for MediaInfo using libmediainfo.so"
   gem.license = "GPL-3"
   gem.authors = ["Brent Sanders"]
   gem.email = "pdkl95@thoughtnoise.net"
-  gem.homepage = "https://github.com/pdkl95/libmediainfo#readme"
+  gem.homepage = "https://github.com/pdkl95/ruby-libmediainfo#readme"
 
   gem.files = `git ls-files`.split($/)
   gem.executables = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
