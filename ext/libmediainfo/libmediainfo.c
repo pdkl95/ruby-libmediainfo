@@ -7,7 +7,7 @@
 #include "track.h"
 
 void
-Init_mediainfo(void)
+Init_libmediainfo(void)
 {
     Init_mediainfo_api();
     Init_mediainfo_MediaInfo();
